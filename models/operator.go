@@ -27,6 +27,21 @@ type Operator struct {
 	client       *ethclient.Client
 }
 
+type GetSponsorshipsAndEarningsResponse struct {
+	Addresses          []ethcommon.Address `json:"addresses"`
+	Earnings           []*big.Int          `json:"earnings"`
+	MaxAllowedEarnings *big.Int            `json:"maxAllowedEarnings"`
+}
+
+type DeployedStakeResponse struct {
+	DeployedBySponsorship map[ethcommon.Address]*big.Int `json:"deployedBySponsorship"`
+	TotalDeployed         []*big.Int                     `json:"totalDeployed"`
+}
+
+type StakedIntoResponse struct {
+	StakedInto *big.Int `json:"stakedInto"`
+}
+
 func NewOperator(contractAddr, ownerAddr, privateKey string) *Operator {
 	client, err := ethclient.Dial(common.GetStringEnvWithDefault("RPC_ADDR", "https://polygon-rpc.com"))
 	if err != nil {
@@ -82,6 +97,61 @@ func (o *Operator) WithdrawEarnings() interface{} {
 	}
 
 	return result
+}
+
+func (o *Operator) GetSponsorshipsAndEarnings() (GetSponsorshipsAndEarningsResponse, error) {
+	result, err := PolygonCall(o.client, o.ContractAddr, o.ContractAbi, "getSponsorshipsAndEarnings", []interface{}{})
+	if err != nil {
+		log.Fatalf("Failed to unpack the output: %v", err)
+		return GetSponsorshipsAndEarningsResponse{}, err
+	}
+	var jsonResult GetSponsorshipsAndEarningsResponse = GetSponsorshipsAndEarningsResponse{
+		Addresses:          result[0].([]ethcommon.Address),
+		Earnings:           result[1].([]*big.Int),
+		MaxAllowedEarnings: result[2].(*big.Int),
+	}
+
+	fmt.Println("Result:", jsonResult)
+	return jsonResult, nil
+}
+
+func (o *Operator) StakedInto(sponsorshipAddr ethcommon.Address) (StakedIntoResponse, error) {
+	var params []interface{}
+	params = append(params, sponsorshipAddr)
+	result, err := PolygonCall(o.client, o.ContractAddr, o.ContractAbi, "stakedInto", params)
+	if err != nil {
+		log.Fatalf("Failed to unpack the output: %v", err)
+		return StakedIntoResponse{}, err
+	}
+
+	bigIntPointer, ok := result[0].(*big.Int)
+	if !ok {
+		log.Fatalf("Failed to cast the result to *big.Int: %v", err)
+		return StakedIntoResponse{}, err
+	}
+
+	var jsonResult StakedIntoResponse = StakedIntoResponse{
+		StakedInto: bigIntPointer,
+	}
+
+	fmt.Println("Result:", jsonResult)
+	return jsonResult, nil
+}
+
+func (o *Operator) GetDeployedStake() (DeployedStakeResponse, error) {
+	SAE, err := o.GetSponsorshipsAndEarnings()
+	if err != nil {
+		return DeployedStakeResponse{}, err
+	}
+
+	for _, addr := range SAE.Addresses {
+		//
+		log.Printf("Address: %s\n", addr.Hex())
+		// finish this
+	}
+
+	return DeployedStakeResponse{}, nil
+	// update return statement with actual value
 }
 
 func PolygonCall(client *ethclient.Client, contractAddress ethcommon.Address, contractABI abi.ABI, method string, params []interface{}) ([]interface{}, error) {

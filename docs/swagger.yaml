@@ -106,6 +106,8 @@ definitions:
     - Fallback
     - Receive
     - Function
+  big.Int:
+    type: object
   github_com_ethereum_go-ethereum_accounts_abi.Method:
     properties:
       constant:
@@ -199,6 +201,11 @@ definitions:
           type: integer
         type: array
     type: object
+  models.StakedIntoResponse:
+    properties:
+      stakedInto:
+        $ref: '#/definitions/big.Int'
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -221,6 +228,42 @@ paths:
               $ref: '#/definitions/models.Operator'
             type: array
       summary: Get the Streamr Operator details.
+      tags:
+      - Operator
+  /operator/sponsorshipsandearnings:
+    get:
+      description: Responds with the list of sponsorships and uncollected earnings.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Operator'
+            type: array
+      summary: Get the sponsorships and earnings.
+      tags:
+      - Operator
+  /operator/stakedinto/{address}:
+    get:
+      description: Responds with the Operator stake deployed in sponsorship.
+      parameters:
+      - description: get deployed stake by sponsorship
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.StakedIntoResponse'
+            type: array
+      summary: Get the Streamr Operator staked balance in sponsorship.
       tags:
       - Operator
   /operator/valuewithoutearnings:

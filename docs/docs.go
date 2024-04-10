@@ -41,6 +41,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/operator/sponsorshipsandearnings": {
+            "get": {
+                "description": "Responds with the list of sponsorships and uncollected earnings.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Get the sponsorships and earnings.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Operator"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/operator/stakedinto/{address}": {
+            "get": {
+                "description": "Responds with the Operator stake deployed in sponsorship.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Get the Streamr Operator staked balance in sponsorship.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "get deployed stake by sponsorship",
+                        "name": "address",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.StakedIntoResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/operator/valuewithoutearnings": {
             "get": {
                 "description": "Responds with the Operator attributes.",
@@ -214,6 +269,9 @@ const docTemplate = `{
                 "Function"
             ]
         },
+        "big.Int": {
+            "type": "object"
+        },
         "github_com_ethereum_go-ethereum_accounts_abi.Method": {
             "type": "object",
             "properties": {
@@ -322,6 +380,14 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                }
+            }
+        },
+        "models.StakedIntoResponse": {
+            "type": "object",
+            "properties": {
+                "stakedInto": {
+                    "$ref": "#/definitions/big.Int"
                 }
             }
         }

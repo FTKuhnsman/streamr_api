@@ -15,6 +15,8 @@ func SetupRouter(o *models.Operator) *gin.Engine {
 		v1.GET("/operator", handlers.GetOperator(o))
 		v1.GET("/operator/valuewithoutearnings", handlers.OperatorValueWithoutEarnings(o))
 		v1.GET("/operator/withdrawearnings", handlers.OperatorWithdrawEarnings(o))
+		v1.GET("/operator/sponsorshipsandearnings", handlers.SponsorshipsAndEarnings(o))
+		v1.GET("/operator/stakedinto/:address", handlers.StakedInto(o))
 	}
 
 	return router
