@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"streamr_api/common"
 	"streamr_api/models"
 	"streamr_api/routes"
@@ -37,5 +38,5 @@ func main() {
 
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	router.Run(":8080")
+	router.Run(fmt.Sprintf(":%d", common.GetIntEnvWithDefault("PORT", 8080)))
 }

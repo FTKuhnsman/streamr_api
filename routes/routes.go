@@ -9,7 +9,12 @@ import (
 
 func SetupRouter(o *models.Operator) *gin.Engine {
 	router := gin.Default()
-
+	root := router.Group("/")
+	{
+		root.GET("/", func(c *gin.Context) {
+			c.Redirect(301, "/docs/index.html")
+		})
+	}
 	v1 := router.Group("/api/v1")
 	{
 		v1.GET("/operator", handlers.GetOperator(o))
