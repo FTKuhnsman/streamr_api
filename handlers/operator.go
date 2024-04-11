@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"math/big"
 	"net/http"
 
 	"streamr_api/models"
@@ -64,6 +65,89 @@ func StakedInto(o *models.Operator) gin.HandlerFunc {
 }
 
 // OperatorValue             godoc
+// @Summary      Get the Streamr Operator total deployed stake.
+// @Description  Responds with the Operator stake deployed in all sponsorships.
+// @Tags         Operator
+// @Produce      json
+// @Success      200  {array}  models.DeployedStakeResponse
+// @Router       /operator/deployedstake/ [get]
+func DeployedStake(o *models.Operator) gin.HandlerFunc {
+	fn := func(c *gin.Context) {
+		result, err := o.GetDeployedStake()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+	}
+
+	return gin.HandlerFunc(fn)
+}
+
+// OperatorValue             godoc
+// @Summary      Increase Streamr Operator stake on a given sponsor.
+// @Description  Responds with the transaction hash.
+// @Tags         Operator
+// @Produce      json
+// @Param        sponsorship  path      string  true  "sponsorship address"
+// @Param        amount  path      int64  true  "amount in wei"
+// @Success      200  {array}  models.TransactionResponse
+// @Router       /operator/stake/{sponsorship}/{amount} [get]
+func Stake(o *models.Operator) gin.HandlerFunc {
+	fn := func(c *gin.Context) {
+		addr := ethcommon.HexToAddress(c.Param("sponsorship"))
+		amount := new(big.Int)
+		_, ok := amount.SetString(c.Param("amount"), 10)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid amount"})
+			return
+		}
+
+		result, err := o.Stake(addr, amount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+	}
+
+	return gin.HandlerFunc(fn)
+}
+
+// OperatorValue             godoc
+// @Summary      Change Streamr Operator stake on a given sponsor.
+// @Description  Responds with the transaction hash.
+// @Tags         Operator
+// @Produce      json
+// @Param        sponsorship  path      string  true  "sponsorship address"
+// @Param        amount  path      int64  true  "amount in wei"
+// @Success      200  {array}  models.TransactionResponse
+// @Router       /operator/reducestaketo/{sponsorship}/{amount} [get]
+func ReduceStakeTo(o *models.Operator) gin.HandlerFunc {
+	fn := func(c *gin.Context) {
+		addr := ethcommon.HexToAddress(c.Param("sponsorship"))
+		amount := new(big.Int)
+		_, ok := amount.SetString(c.Param("amount"), 10)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid amount"})
+			return
+		}
+
+		result, err := o.ReduceStakeTo(addr, amount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+	}
+
+	return gin.HandlerFunc(fn)
+}
+
+// OperatorValue             godoc
 // @Summary      Get the sponsorships and earnings.
 // @Description  Responds with the list of sponsorships and uncollected earnings.
 // @Tags         Operator
@@ -89,11 +173,37 @@ func SponsorshipsAndEarnings(o *models.Operator) gin.HandlerFunc {
 // @Description  Responds with the Operator attributes.
 // @Tags         Operator
 // @Produce      json
-// @Success      200  {array}  models.Operator
+// @Success      200  {array}  models.TransactionResponse
 // @Router       /operator/withdrawearnings [get]
 func OperatorWithdrawEarnings(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
-		result := o.WithdrawEarnings()
+		result, err := o.WithdrawEarnings()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+	}
+
+	return gin.HandlerFunc(fn)
+}
+
+// WithdrawEarningsAndCompount            godoc
+// @Summary      Withdraw earnings from sponsorship and restake.
+// @Description  Withdraws earnings from all sponsorships and restake to compound.
+// @Tags         Operator
+// @Produce      json
+// @Success      200  {array}  []models.TransactionResponse
+// @Router       /operator/withdrawearningsandcompound [get]
+func WithdrawEarningsAndCompound(o *models.Operator) gin.HandlerFunc {
+	fn := func(c *gin.Context) {
+
+		result, err := o.WithdrawEarningsAndCompound()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusOK, result)
 	}
 

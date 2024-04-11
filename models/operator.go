@@ -1,30 +1,25 @@
 package models
 
 import (
-	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"log"
 	"math/big"
+	"streamr_api/blockchain"
 	"streamr_api/common"
 	"strings"
+	"time"
 
-	"github.com/cockroachdb/errors"
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type Operator struct {
 	ContractAddr ethcommon.Address `json:"contractAddr"`
 	ContractAbi  abi.ABI           `json:"contractAbi"`
 	OwnerAddr    ethcommon.Address `json:"ownerAddr"`
-	privateKey   *ecdsa.PrivateKey
-	client       *ethclient.Client
+	PrivateKey   *ecdsa.PrivateKey
+	TxManager    *blockchain.TxManager
 }
 
 type GetSponsorshipsAndEarningsResponse struct {
@@ -35,19 +30,14 @@ type GetSponsorshipsAndEarningsResponse struct {
 
 type DeployedStakeResponse struct {
 	DeployedBySponsorship map[ethcommon.Address]*big.Int `json:"deployedBySponsorship"`
-	TotalDeployed         []*big.Int                     `json:"totalDeployed"`
+	TotalDeployed         *big.Int                       `json:"totalDeployed"`
 }
 
 type StakedIntoResponse struct {
 	StakedInto *big.Int `json:"stakedInto"`
 }
 
-func NewOperator(contractAddr, ownerAddr, privateKey string) *Operator {
-	client, err := ethclient.Dial(common.GetStringEnvWithDefault("RPC_ADDR", "https://polygon-rpc.com"))
-	if err != nil {
-		panic(err)
-	}
-
+func NewOperator(contractAddr string, ownerAddr string, privateKey string) *Operator {
 	abiStr, err := common.FetchContractABI(contractAddr)
 	if err != nil {
 		panic(err)
@@ -63,44 +53,107 @@ func NewOperator(contractAddr, ownerAddr, privateKey string) *Operator {
 		log.Fatalf("Failed to load private key: %v", err)
 	}
 
+	txManager, err := blockchain.NewTxManager(privKey, ethcommon.HexToAddress(contractAddr), contractABI)
+	if err != nil {
+		log.Fatalf("Failed to create tx manager: %v", err)
+	}
+
 	return &Operator{
 		ContractAddr: ethcommon.HexToAddress(contractAddr),
 		ContractAbi:  contractABI,
 		OwnerAddr:    ethcommon.HexToAddress(ownerAddr),
-		privateKey:   privKey,
-		client:       client,
+		PrivateKey:   privKey,
+		TxManager:    txManager,
 	}
 }
 
 func (o *Operator) GetValueWithoutEarnings() interface{} {
-	result, err := PolygonCall(o.client, o.ContractAddr, o.ContractAbi, "valueWithoutEarnings", []interface{}{})
+	result, err := o.TxManager.ContractCall("valueWithoutEarnings", []interface{}{})
 	if err != nil {
 		log.Fatalf("Failed to unpack the output: %v", err)
 		return err
 	}
-
-	fmt.Println("Result:", result)
 	return result
 }
 
-func (o *Operator) WithdrawEarnings() interface{} {
-	params := []interface{}{} // The parameters for your method, if any
-	addr1 := ethcommon.HexToAddress("0xc95e7aa2436a2ab8eebae10079d4cbf556adc55c")
-	addList := []ethcommon.Address{addr1}
+func (o *Operator) WithdrawEarnings() (string, error) {
 
-	params = append(params, addList)
-
-	result, err := PolygonSendTx(o.client, o.privateKey, o.ContractAddr, o.ContractAbi, "withdrawEarningsFromSponsorships", params)
+	sponsors, err := o.GetSponsorshipsAndEarnings()
 	if err != nil {
-		log.Fatalf("Failed to send transaction: %v", err)
-		return err
+		log.Fatalf("Failed to get sponsorships and earnings: %v", err)
+		return "", err
 	}
 
-	return result
+	params := []interface{}{} // The parameters for your method, if any
+
+	params = append(params, sponsors.Addresses)
+
+	result, err := o.TxManager.ContractSendTx("withdrawEarningsFromSponsorships", params)
+	if err != nil {
+		log.Fatalf("Failed to send transaction: %v", err)
+		return "", err
+	}
+
+	return result, nil
+}
+
+func (o *Operator) WithdrawEarningsAndCompound() ([]string, error) {
+	txList := []string{}
+	sponsors, err := o.GetSponsorshipsAndEarnings()
+	if err != nil {
+		log.Fatalf("Failed to get sponsorships and earnings: %v", err)
+		return nil, err
+	}
+
+	params := []interface{}{} // The parameters for your method, if any
+
+	params = append(params, sponsors.Addresses)
+
+	result, err := o.TxManager.ContractSendTx("withdrawEarningsFromSponsorships", params)
+	if err != nil {
+		log.Fatalf("Failed to send transaction: %v", err)
+		return nil, err
+	}
+
+	txList = append(txList, result)
+
+	// get current deploy stake
+	deployedStake, err := o.GetDeployedStake()
+	if err != nil {
+		log.Fatalf("Failed to get deployed stake: %v", err)
+		return nil, err
+	}
+
+	// iterate each sponsor and set stake to the current amount plus the earnings withdrawn in the previous transaction
+	for sponsorA, currentAmount := range deployedStake.DeployedBySponsorship {
+		for i, sponsorB := range sponsors.Addresses {
+			if sponsorA == sponsorB {
+				newAmount := new(big.Int).Add(currentAmount, sponsors.Earnings[i])
+				log.Printf("Adding %s stake to %s\n", newAmount.String(), sponsorA.Hex())
+				tx, err := o.Stake(sponsorA, sponsors.Earnings[i])
+				go func() {
+					txResult, err := o.TxManager.PolygonWaitForTx(tx, 120*time.Second)
+					if err != nil {
+						log.Printf("Failed to wait for transaction: %v", err)
+					} else {
+						log.Printf("Transaction %s completed as: %v\n", txResult.Hash().Hex(), txResult)
+					}
+				}()
+
+				if err != nil {
+					log.Fatalf("Failed to reduce stake: %v", err)
+					return nil, err
+				}
+				txList = append(txList, tx)
+			}
+		}
+	}
+
+	return txList, nil
 }
 
 func (o *Operator) GetSponsorshipsAndEarnings() (GetSponsorshipsAndEarningsResponse, error) {
-	result, err := PolygonCall(o.client, o.ContractAddr, o.ContractAbi, "getSponsorshipsAndEarnings", []interface{}{})
+	result, err := o.TxManager.ContractCall("getSponsorshipsAndEarnings", []interface{}{})
 	if err != nil {
 		log.Fatalf("Failed to unpack the output: %v", err)
 		return GetSponsorshipsAndEarningsResponse{}, err
@@ -110,15 +163,15 @@ func (o *Operator) GetSponsorshipsAndEarnings() (GetSponsorshipsAndEarningsRespo
 		Earnings:           result[1].([]*big.Int),
 		MaxAllowedEarnings: result[2].(*big.Int),
 	}
-
-	fmt.Println("Result:", jsonResult)
 	return jsonResult, nil
 }
 
 func (o *Operator) StakedInto(sponsorshipAddr ethcommon.Address) (StakedIntoResponse, error) {
 	var params []interface{}
 	params = append(params, sponsorshipAddr)
-	result, err := PolygonCall(o.client, o.ContractAddr, o.ContractAbi, "stakedInto", params)
+
+	result, err := o.TxManager.ContractCall("stakedInto", params)
+
 	if err != nil {
 		log.Fatalf("Failed to unpack the output: %v", err)
 		return StakedIntoResponse{}, err
@@ -134,7 +187,6 @@ func (o *Operator) StakedInto(sponsorshipAddr ethcommon.Address) (StakedIntoResp
 		StakedInto: bigIntPointer,
 	}
 
-	fmt.Println("Result:", jsonResult)
 	return jsonResult, nil
 }
 
@@ -144,99 +196,43 @@ func (o *Operator) GetDeployedStake() (DeployedStakeResponse, error) {
 		return DeployedStakeResponse{}, err
 	}
 
-	for _, addr := range SAE.Addresses {
-		//
-		log.Printf("Address: %s\n", addr.Hex())
-		// finish this
+	response := DeployedStakeResponse{
+		DeployedBySponsorship: make(map[ethcommon.Address]*big.Int),
+		TotalDeployed:         big.NewInt(0),
 	}
 
-	return DeployedStakeResponse{}, nil
+	for _, addr := range SAE.Addresses {
+		log.Printf("Address: %s\n", addr.Hex())
+		sponsorDeployed, err := o.StakedInto(addr)
+		if err != nil {
+			return DeployedStakeResponse{}, err
+		}
+		response.DeployedBySponsorship[addr] = sponsorDeployed.StakedInto
+		response.TotalDeployed.Add(response.TotalDeployed, sponsorDeployed.StakedInto)
+	}
+	log.Printf("Total Deployed: %s\n", response.TotalDeployed.String())
+	return response, nil
 	// update return statement with actual value
 }
 
-func PolygonCall(client *ethclient.Client, contractAddress ethcommon.Address, contractABI abi.ABI, method string, params []interface{}) ([]interface{}, error) {
-	// Creating a call message
-	data, err := contractABI.Pack(method, params...)
+func (o *Operator) ReduceStakeTo(addr ethcommon.Address, targetStake *big.Int) (string, error) {
+	params := []interface{}{addr, targetStake}
+	result, err := o.TxManager.ContractSendTx("reduceStakeTo", params)
 	if err != nil {
-		return nil, err
+		log.Fatalf("Failed to send transaction: %v", err)
+		return "", err
 	}
 
-	callMsg := ethereum.CallMsg{
-		To:   &contractAddress,
-		Data: data,
-	}
-
-	output, err := client.CallContract(context.Background(), callMsg, nil)
-	if err != nil {
-		log.Fatalf("Failed to execute contract call: %v", err)
-		return nil, err
-	}
-
-	result, err := contractABI.Unpack(method, output)
-	if err != nil {
-		log.Fatalf("Failed to unpack the output: %v", err)
-		return nil, err
-	}
-
-	fmt.Println("Result:", result)
 	return result, nil
 }
 
-func PolygonSendTx(client *ethclient.Client, privateKey *ecdsa.PrivateKey, contractAddress ethcommon.Address, contractABI abi.ABI, method string, params []interface{}) (interface{}, error) {
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("Cannot assert type: publicKey is not of type *ecdsa.PublicKey")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+func (o *Operator) Stake(addr ethcommon.Address, targetStake *big.Int) (string, error) {
+	params := []interface{}{addr, targetStake}
+	result, err := o.TxManager.ContractSendTx("stake", params)
 	if err != nil {
-		return nil, err
+		log.Fatalf("Failed to send transaction: %v", err)
+		return "", err
 	}
 
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	// Prepare the transaction options
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID) // Chain ID for Polygon Mainnet
-	if err != nil {
-		return nil, err
-	}
-
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)      // in wei (0 if your function is not payable)
-	auth.GasLimit = uint64(3000000) // set the gas limit to a suitable value
-	auth.GasPrice = gasPrice
-	// Pack the data to send in the transaction
-	inputData, err := contractABI.Pack(method, params...)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the transaction
-	tx := types.NewTransaction(auth.Nonce.Uint64(), contractAddress, auth.Value, auth.GasLimit, auth.GasPrice, inputData)
-
-	// Sign the transaction
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// Send the transaction
-	err = client.SendTransaction(context.Background(), signedTx)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("Transaction sent! TX Hash: %s\n", signedTx.Hash().Hex())
-
-	return signedTx.Hash().Hex(), nil
+	return result, nil
 }

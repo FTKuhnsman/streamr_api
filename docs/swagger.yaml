@@ -188,6 +188,15 @@ definitions:
       tupleType:
         description: Underlying struct of the tuple
     type: object
+  models.DeployedStakeResponse:
+    properties:
+      deployedBySponsorship:
+        additionalProperties:
+          $ref: '#/definitions/big.Int'
+        type: object
+      totalDeployed:
+        $ref: '#/definitions/big.Int'
+    type: object
   models.Operator:
     properties:
       contractAbi:
@@ -205,6 +214,11 @@ definitions:
     properties:
       stakedInto:
         $ref: '#/definitions/big.Int'
+    type: object
+  models.TransactionResponse:
+    properties:
+      txHash:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -230,6 +244,47 @@ paths:
       summary: Get the Streamr Operator details.
       tags:
       - Operator
+  /operator/deployedstake/:
+    get:
+      description: Responds with the Operator stake deployed in all sponsorships.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.DeployedStakeResponse'
+            type: array
+      summary: Get the Streamr Operator total deployed stake.
+      tags:
+      - Operator
+  /operator/reducestaketo/{sponsorship}/{amount}:
+    get:
+      description: Responds with the transaction hash.
+      parameters:
+      - description: sponsorship address
+        in: path
+        name: sponsorship
+        required: true
+        type: string
+      - description: amount in wei
+        in: path
+        name: amount
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.TransactionResponse'
+            type: array
+      summary: Change Streamr Operator stake on a given sponsor.
+      tags:
+      - Operator
   /operator/sponsorshipsandearnings:
     get:
       description: Responds with the list of sponsorships and uncollected earnings.
@@ -243,6 +298,32 @@ paths:
               $ref: '#/definitions/models.Operator'
             type: array
       summary: Get the sponsorships and earnings.
+      tags:
+      - Operator
+  /operator/stake/{sponsorship}/{amount}:
+    get:
+      description: Responds with the transaction hash.
+      parameters:
+      - description: sponsorship address
+        in: path
+        name: sponsorship
+        required: true
+        type: string
+      - description: amount in wei
+        in: path
+        name: amount
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.TransactionResponse'
+            type: array
+      summary: Increase Streamr Operator stake on a given sponsor.
       tags:
       - Operator
   /operator/stakedinto/{address}:
@@ -291,9 +372,26 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.Operator'
+              $ref: '#/definitions/models.TransactionResponse'
             type: array
       summary: Get the Streamr Operator details.
+      tags:
+      - Operator
+  /operator/withdrawearningsandcompound:
+    get:
+      description: Withdraws earnings from all sponsorships and restake to compound.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              items:
+                $ref: '#/definitions/models.TransactionResponse'
+              type: array
+            type: array
+      summary: Withdraw earnings from sponsorship and restake.
       tags:
       - Operator
 swagger: "2.0"

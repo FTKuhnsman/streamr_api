@@ -26,6 +26,7 @@ func init() {
 }
 
 func main() {
+
 	operator := models.NewOperator(
 		common.GetStringEnvWithDefault("CONTRACT_ADDR", "0x1234567890"),
 		common.GetStringEnvWithDefault("OWNER_ADDR", "0x1234567890"),

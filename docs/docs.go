@@ -41,6 +41,68 @@ const docTemplate = `{
                 }
             }
         },
+        "/operator/deployedstake/": {
+            "get": {
+                "description": "Responds with the Operator stake deployed in all sponsorships.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Get the Streamr Operator total deployed stake.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.DeployedStakeResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/operator/reducestaketo/{sponsorship}/{amount}": {
+            "get": {
+                "description": "Responds with the transaction hash.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Change Streamr Operator stake on a given sponsor.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "sponsorship address",
+                        "name": "sponsorship",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "amount in wei",
+                        "name": "amount",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.TransactionResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/operator/sponsorshipsandearnings": {
             "get": {
                 "description": "Responds with the list of sponsorships and uncollected earnings.",
@@ -58,6 +120,45 @@ const docTemplate = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/models.Operator"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/operator/stake/{sponsorship}/{amount}": {
+            "get": {
+                "description": "Responds with the transaction hash.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Increase Streamr Operator stake on a given sponsor.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "sponsorship address",
+                        "name": "sponsorship",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "amount in wei",
+                        "name": "amount",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.TransactionResponse"
                             }
                         }
                     }
@@ -135,7 +236,33 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Operator"
+                                "$ref": "#/definitions/models.TransactionResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/operator/withdrawearningsandcompound": {
+            "get": {
+                "description": "Withdraws earnings from all sponsorships and restake to compound.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Withdraw earnings from sponsorship and restake.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/models.TransactionResponse"
+                                }
                             }
                         }
                     }
@@ -363,6 +490,20 @@ const docTemplate = `{
                 }
             }
         },
+        "models.DeployedStakeResponse": {
+            "type": "object",
+            "properties": {
+                "deployedBySponsorship": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/big.Int"
+                    }
+                },
+                "totalDeployed": {
+                    "$ref": "#/definitions/big.Int"
+                }
+            }
+        },
         "models.Operator": {
             "type": "object",
             "properties": {
@@ -388,6 +529,14 @@ const docTemplate = `{
             "properties": {
                 "stakedInto": {
                     "$ref": "#/definitions/big.Int"
+                }
+            }
+        },
+        "models.TransactionResponse": {
+            "type": "object",
+            "properties": {
+                "txHash": {
+                    "type": "string"
                 }
             }
         }
