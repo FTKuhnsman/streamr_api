@@ -32,6 +32,7 @@ To configure the Streamr Operator Service, set the following environment variabl
 - `PRIVATE_KEY`: The private key corresponding to `OWNER_ADDR`. It is used for signing transactions. **Ensure this is kept secure and not exposed in your code or version control**.
 - `RPC_ADDR`: The RPC address of your Polygon node. This allows the API to communicate with the Polygon blockchain. Example: `https://polygon-mainnet.infura.io/v3/YOUR_PROJECT_ID` for Polygon mainnet or a similar URL for other providers.
 - `PORT`: (Optional) The port number on which the Streamr Operator API will listen for incoming requests. The default is `8080` if not specified.
+- `CRON_JOB_FILE`: (Optional) The location of the json file that stores cron job configurations. The default is `cron_jobs.json` (in the same directory as the streamr_api binary) if not specified. When running in docker the default is `/cron/cron_jobs.json`.
 
 These variables can be set in your operating system's environment, or you can use a `.env` file at the root of your project with the following content:
 
@@ -41,6 +42,7 @@ OWNER_ADDR=0xYourOwnerAddress
 PRIVATE_KEY=YourPrivateKey
 RPC_ADDR=https://yourRpcUrl 
 PORT=8080
+CRON_JOB_FILE=cron_jobs.json
 ```
 
 Note: Replace the placeholder values with your actual configuration details.
@@ -179,7 +181,7 @@ curl -X GET "http://localhost:8080/api/v1/operator/withdrawearningsandcompound" 
 ```
 
 ## Cron Job Management
-The Streamr Operator Service now supports managing cron jobs through a set of RESTful APIs. These APIs allow you to create, retrieve, disable, enable, and delete cron jobs dynamically.
+The Streamr Operator Service now supports managing cron jobs through a set of RESTful APIs. These APIs allow you to create, retrieve, disable, enable, and delete cron jobs dynamically. Cron jobs are stored by default in cron_jobs.json file which is automatically created in the same directory as the streamr_api binary.
 
 Creating a New Cron Job
 To add a new cron job to the scheduler:
