@@ -3,7 +3,7 @@ WINDOWS=$(EXECUTABLE)_windows_amd64.exe
 LINUX=$(EXECUTABLE)_linux_amd64
 VERSION=$(shell git describe --tags --always)
 
-build: windows linux darwin ## Build binaries
+build: windows linux ## Build binaries
 	@echo version: $(VERSION)
 
 windows: $(WINDOWS) ## Build for Windows
