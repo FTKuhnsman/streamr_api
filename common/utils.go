@@ -1,6 +1,8 @@
 package common
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"os"
 	"strconv"
@@ -22,4 +24,12 @@ func GetStringEnvWithDefault(key string, def string) string {
 		return def
 	}
 	return val
+}
+
+func GenerateRandomHexString(nBytes int) (string, error) {
+	bytes := make([]byte, nBytes)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err // return the error if there's a problem generating random bytes
+	}
+	return hex.EncodeToString(bytes), nil
 }

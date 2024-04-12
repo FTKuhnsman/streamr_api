@@ -1,0 +1,1 @@
+{"2758c67cc4ff88d78974ad5545b30a04":{"name":"sample job","schedule":"0/5 * * * * *","endpoint":"/api/v1/operator/deployedstake","method":"GET","enabled":false}}

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(o *models.Operator) *gin.Engine {
+func SetupRouter(o *models.Operator, s *models.Scheduler) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
@@ -28,6 +28,12 @@ func SetupRouter(o *models.Operator) *gin.Engine {
 		v1.GET("/operator/deployedstake", handlers.DeployedStake(o))
 		v1.GET("/operator/reducestaketo/:sponsorship/:amount", handlers.ReduceStakeTo(o))
 		v1.GET("/operator/stake/:sponsorship/:amount", handlers.Stake(o))
+
+		v1.POST("/cronjobs/create", handlers.CreateCronJob(s))
+		v1.GET("/cronjobs", handlers.GetCronJobs(s))
+		v1.POST("/cronjobs/disable/:id", handlers.DisableCronJob(s))
+		v1.POST("/cronjobs/enable/:id", handlers.EnableCronJob(s))
+		v1.POST("/cronjobs/delete/:id", handlers.DeleteCronJob(s))
 	}
 
 	return router

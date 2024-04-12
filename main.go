@@ -34,7 +34,9 @@ func main() {
 		common.GetStringEnvWithDefault("PRIVATE_KEY", "0x1234567890"),
 	)
 
-	router := routes.SetupRouter(operator)
+	scheduler := models.NewScheduler()
+
+	router := routes.SetupRouter(operator, scheduler)
 
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

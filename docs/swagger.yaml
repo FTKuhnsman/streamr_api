@@ -108,6 +108,16 @@ definitions:
     - Function
   big.Int:
     type: object
+  blockchain.TxManager:
+    type: object
+  ecdsa.PrivateKey:
+    properties:
+      d:
+        $ref: '#/definitions/big.Int'
+      elliptic.Curve: {}
+      x:
+        $ref: '#/definitions/big.Int'
+    type: object
   github_com_ethereum_go-ethereum_accounts_abi.Method:
     properties:
       constant:
@@ -188,6 +198,24 @@ definitions:
       tupleType:
         description: Underlying struct of the tuple
     type: object
+  models.CronJob:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+      endpoint:
+        example: /api/v1/sample-endpoint
+        type: string
+      method:
+        example: GET
+        type: string
+      name:
+        example: sample job
+        type: string
+      schedule:
+        example: 0/5 * * * * *
+        type: string
+    type: object
   models.DeployedStakeResponse:
     properties:
       deployedBySponsorship:
@@ -209,16 +237,22 @@ definitions:
         items:
           type: integer
         type: array
+      privateKey:
+        $ref: '#/definitions/ecdsa.PrivateKey'
+      txManager:
+        $ref: '#/definitions/blockchain.TxManager'
+    type: object
+  models.Scheduler:
+    properties:
+      jobs:
+        additionalProperties:
+          $ref: '#/definitions/models.CronJob'
+        type: object
     type: object
   models.StakedIntoResponse:
     properties:
       stakedInto:
         $ref: '#/definitions/big.Int'
-    type: object
-  models.TransactionResponse:
-    properties:
-      txHash:
-        type: string
     type: object
 host: localhost:8080
 info:
@@ -229,6 +263,101 @@ info:
   title: Streamr Operator Service
   version: "1.0"
 paths:
+  /cronjobs:
+    get:
+      description: Retrieves a list of all scheduled cron jobs.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Scheduler'
+            type: array
+      summary: Get all cron jobs
+      tags:
+      - CronJob
+  /cronjobs/create:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new cron job to the scheduler and saves it to the storage.
+      parameters:
+      - description: Create Cron Job
+        in: body
+        name: cronJob
+        required: true
+        schema:
+          $ref: '#/definitions/models.CronJob'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CronJob'
+      summary: Create a new cron job
+      tags:
+      - CronJob
+  /cronjobs/delete/{id}:
+    post:
+      description: Deletes a cron job in the scheduler and saves the change to the
+        storage.
+      parameters:
+      - description: Cron Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CronJob'
+      summary: Delete a cron job by ID
+      tags:
+      - CronJob
+  /cronjobs/disable/{id}:
+    post:
+      description: Disables a cron job in the scheduler and saves it to the storage.
+      parameters:
+      - description: Cron Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CronJob'
+      summary: Disable a cron job by ID
+      tags:
+      - CronJob
+  /cronjobs/enable/{id}:
+    post:
+      description: Enables a cron job in the scheduler and saves it to the storage.
+      parameters:
+      - description: Cron Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CronJob'
+      summary: Enable a cron job by ID
+      tags:
+      - CronJob
   /operator:
     get:
       description: Responds with the Operator attributes.
@@ -280,7 +409,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.TransactionResponse'
+              type: string
             type: array
       summary: Change Streamr Operator stake on a given sponsor.
       tags:
@@ -321,7 +450,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.TransactionResponse'
+              type: string
             type: array
       summary: Increase Streamr Operator stake on a given sponsor.
       tags:
@@ -372,7 +501,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.TransactionResponse'
+              type: string
             type: array
       summary: Get the Streamr Operator details.
       tags:
@@ -388,7 +517,7 @@ paths:
           schema:
             items:
               items:
-                $ref: '#/definitions/models.TransactionResponse'
+                type: string
               type: array
             type: array
       summary: Withdraw earnings from sponsorship and restake.

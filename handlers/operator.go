@@ -92,7 +92,7 @@ func DeployedStake(o *models.Operator) gin.HandlerFunc {
 // @Produce      json
 // @Param        sponsorship  path      string  true  "sponsorship address"
 // @Param        amount  path      int64  true  "amount in wei"
-// @Success      200  {array}  models.TransactionResponse
+// @Success      200  {array}  string
 // @Router       /operator/stake/{sponsorship}/{amount} [get]
 func Stake(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
@@ -123,7 +123,7 @@ func Stake(o *models.Operator) gin.HandlerFunc {
 // @Produce      json
 // @Param        sponsorship  path      string  true  "sponsorship address"
 // @Param        amount  path      int64  true  "amount in wei"
-// @Success      200  {array}  models.TransactionResponse
+// @Success      200  {array}  string
 // @Router       /operator/reducestaketo/{sponsorship}/{amount} [get]
 func ReduceStakeTo(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
@@ -173,7 +173,7 @@ func SponsorshipsAndEarnings(o *models.Operator) gin.HandlerFunc {
 // @Description  Responds with the Operator attributes.
 // @Tags         Operator
 // @Produce      json
-// @Success      200  {array}  models.TransactionResponse
+// @Success      200  {array}  string
 // @Router       /operator/withdrawearnings [get]
 func OperatorWithdrawEarnings(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
@@ -194,7 +194,7 @@ func OperatorWithdrawEarnings(o *models.Operator) gin.HandlerFunc {
 // @Description  Withdraws earnings from all sponsorships and restake to compound.
 // @Tags         Operator
 // @Produce      json
-// @Success      200  {array}  []models.TransactionResponse
+// @Success      200  {array}  []string
 // @Router       /operator/withdrawearningsandcompound [get]
 func WithdrawEarningsAndCompound(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {

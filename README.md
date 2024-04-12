@@ -148,7 +148,6 @@ curl -X GET "http://localhost:8080/api/v1/operator" -H "accept: application/json
 To withdraw earnings for the operator:
 
 ```bash
-Copy code
 curl -X GET "http://localhost:8080/api/v1/operator/withdrawearnings" -H "accept: application/json"
 ```
 
@@ -156,14 +155,12 @@ curl -X GET "http://localhost:8080/api/v1/operator/withdrawearnings" -H "accept:
 To stake a certain amount on a given sponsor, replace <sponsorship_address> and <amount> with the sponsorship's address and the amount to stake in wei:
 
 ```bash
-Copy code
 curl -X GET "http://localhost:8080/api/v1/operator/stake/<sponsorship_address>/<amount>" -H "accept: application/json"
 ```
 ### Reducing Stake
 To reduce the stake to a certain amount on a given sponsor, replace <sponsorship_address> and <new_amount> with the sponsorship's address and the new amount to stake in wei:
 
 ```bash
-Copy code
 curl -X GET "http://localhost:8080/api/v1/operator/reducestaketo/<sponsorship_address>/<new_amount>" -H "accept: application/json"
 ```
 
@@ -171,7 +168,6 @@ curl -X GET "http://localhost:8080/api/v1/operator/reducestaketo/<sponsorship_ad
 To list all sponsorships along with uncollected earnings:
 
 ```bash
-Copy code
 curl -X GET "http://localhost:8080/api/v1/operator/sponsorshipsandearnings" -H "accept: application/json"
 ```
 
@@ -179,9 +175,59 @@ curl -X GET "http://localhost:8080/api/v1/operator/sponsorshipsandearnings" -H "
 To withdraw earnings from all sponsorships and automatically restake them:
 
 ```bash
-Copy code
 curl -X GET "http://localhost:8080/api/v1/operator/withdrawearningsandcompound" -H "accept: application/json"
 ```
+
+## Cron Job Management
+The Streamr Operator Service now supports managing cron jobs through a set of RESTful APIs. These APIs allow you to create, retrieve, disable, enable, and delete cron jobs dynamically.
+
+Creating a New Cron Job
+To add a new cron job to the scheduler:
+
+```bash
+curl -X POST http://localhost:8080/cronjobs/create \
+     -H "Content-Type: application/json" \
+     -d '{
+           "name": "CompoundEarningsDaily",
+           "schedule": "0 0 * * * ",
+           "method": "GET",
+           "endpoint": "/api/v1/operator/withdrawearningsandcompound",
+           "enabled": true
+         }'
+```
+
+### Retrieving All Cron Jobs
+To get a list of all scheduled cron jobs:
+
+```bash
+curl -X GET http://localhost:8080/cronjobs
+```
+
+### Disabling a Cron Job
+To disable a specific cron job by its ID:
+
+```bash
+curl -X POST http://localhost:8080/cronjobs/disable/{id}
+```
+Replace {id} with the actual ID of the cron job you wish to disable.
+
+### Enabling a Cron Job
+To enable a previously disabled cron job by its ID:
+
+```bash
+curl -X POST http://localhost:8080/cronjobs/enable/{id}
+```
+Replace {id} with the actual ID of the cron job you wish to enable.
+
+### Deleting a Cron Job
+To delete a cron job by its ID:
+
+```bash
+curl -X POST http://localhost:8080/cronjobs/delete/{id}
+```
+Replace {id} with the actual ID of the cron job you wish to delete.
+
+
 
 Note: These examples use the default port 8080 specified in the Docker Compose file. If you are running the service without Docker or have configured a different port, adjust the URLs accordingly.
 

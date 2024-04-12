@@ -18,6 +18,150 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/cronjobs": {
+            "get": {
+                "description": "Retrieves a list of all scheduled cron jobs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CronJob"
+                ],
+                "summary": "Get all cron jobs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Scheduler"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cronjobs/create": {
+            "post": {
+                "description": "Adds a new cron job to the scheduler and saves it to the storage.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CronJob"
+                ],
+                "summary": "Create a new cron job",
+                "parameters": [
+                    {
+                        "description": "Create Cron Job",
+                        "name": "cronJob",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CronJob"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CronJob"
+                        }
+                    }
+                }
+            }
+        },
+        "/cronjobs/delete/{id}": {
+            "post": {
+                "description": "Deletes a cron job in the scheduler and saves the change to the storage.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CronJob"
+                ],
+                "summary": "Delete a cron job by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cron Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CronJob"
+                        }
+                    }
+                }
+            }
+        },
+        "/cronjobs/disable/{id}": {
+            "post": {
+                "description": "Disables a cron job in the scheduler and saves it to the storage.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CronJob"
+                ],
+                "summary": "Disable a cron job by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cron Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CronJob"
+                        }
+                    }
+                }
+            }
+        },
+        "/cronjobs/enable/{id}": {
+            "post": {
+                "description": "Enables a cron job in the scheduler and saves it to the storage.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "CronJob"
+                ],
+                "summary": "Enable a cron job by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cron Job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CronJob"
+                        }
+                    }
+                }
+            }
+        },
         "/operator": {
             "get": {
                 "description": "Responds with the Operator attributes.",
@@ -96,7 +240,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.TransactionResponse"
+                                "type": "string"
                             }
                         }
                     }
@@ -158,7 +302,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.TransactionResponse"
+                                "type": "string"
                             }
                         }
                     }
@@ -236,7 +380,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.TransactionResponse"
+                                "type": "string"
                             }
                         }
                     }
@@ -261,7 +405,7 @@ const docTemplate = `{
                             "items": {
                                 "type": "array",
                                 "items": {
-                                    "$ref": "#/definitions/models.TransactionResponse"
+                                    "type": "string"
                                 }
                             }
                         }
@@ -399,6 +543,21 @@ const docTemplate = `{
         "big.Int": {
             "type": "object"
         },
+        "blockchain.TxManager": {
+            "type": "object"
+        },
+        "ecdsa.PrivateKey": {
+            "type": "object",
+            "properties": {
+                "d": {
+                    "$ref": "#/definitions/big.Int"
+                },
+                "elliptic.Curve": {},
+                "x": {
+                    "$ref": "#/definitions/big.Int"
+                }
+            }
+        },
         "github_com_ethereum_go-ethereum_accounts_abi.Method": {
             "type": "object",
             "properties": {
@@ -490,6 +649,31 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CronJob": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "endpoint": {
+                    "type": "string",
+                    "example": "/api/v1/sample-endpoint"
+                },
+                "method": {
+                    "type": "string",
+                    "example": "GET"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "sample job"
+                },
+                "schedule": {
+                    "type": "string",
+                    "example": "0/5 * * * * *"
+                }
+            }
+        },
         "models.DeployedStakeResponse": {
             "type": "object",
             "properties": {
@@ -521,6 +705,23 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "privateKey": {
+                    "$ref": "#/definitions/ecdsa.PrivateKey"
+                },
+                "txManager": {
+                    "$ref": "#/definitions/blockchain.TxManager"
+                }
+            }
+        },
+        "models.Scheduler": {
+            "type": "object",
+            "properties": {
+                "jobs": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/models.CronJob"
+                    }
                 }
             }
         },
@@ -529,14 +730,6 @@ const docTemplate = `{
             "properties": {
                 "stakedInto": {
                     "$ref": "#/definitions/big.Int"
-                }
-            }
-        },
-        "models.TransactionResponse": {
-            "type": "object",
-            "properties": {
-                "txHash": {
-                    "type": "string"
                 }
             }
         }

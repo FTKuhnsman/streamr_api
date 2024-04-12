@@ -1,4 +1,4 @@
-package common
+package blockchain
 
 import (
 	"encoding/json"

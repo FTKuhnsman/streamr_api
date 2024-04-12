@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/big"
 	"streamr_api/blockchain"
-	"streamr_api/common"
 	"strings"
 	"time"
 
@@ -38,7 +37,7 @@ type StakedIntoResponse struct {
 }
 
 func NewOperator(contractAddr string, ownerAddr string, privateKey string) *Operator {
-	abiStr, err := common.FetchContractABI(contractAddr)
+	abiStr, err := blockchain.FetchContractABI(contractAddr)
 	if err != nil {
 		panic(err)
 	}
