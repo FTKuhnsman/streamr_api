@@ -8,7 +8,9 @@ import (
 )
 
 func SetupRouter(o *models.Operator) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+
 	root := router.Group("/")
 	{
 		root.GET("/", func(c *gin.Context) {

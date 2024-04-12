@@ -7,7 +7,7 @@ COPY . .
 ENV GOCACHE=/root/.cache/go-build
 # ADD . /go/src/myapp
 # WORKDIR /go/src/myapp
-RUN --mount=type=cache,target="/root/.cache/go-build" go build -o streamr_api main.go
+RUN go build -o streamr_api main.go
 #RUN go install
 
 FROM ubuntu:22.04
