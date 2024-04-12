@@ -4,12 +4,19 @@ import (
 	"streamr_api/handlers"
 	"streamr_api/models"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter(o *models.Operator, s *models.Scheduler) *gin.Engine {
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode)
 	router := gin.Default()
+
+	config := cors.DefaultConfig()
+	// config.AllowOrigins = []string{"http://google.com", "http://facebook.com"}
+	config.AllowAllOrigins = true
+
+	router.Use(cors.New(config))
 
 	root := router.Group("/")
 	{
