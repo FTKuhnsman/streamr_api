@@ -47,41 +47,7 @@ CRON_JOB_FILE=cron_jobs.json
 
 Note: Replace the placeholder values with your actual configuration details.
 
-## Running the Service
-
-After configuring the environment variables, you can start the Streamr API Service by following these steps:
-
-1. **Build the application** (optional): While this step is optional since you can run Go applications directly through the `go run` command, building the application can help ensure all dependencies are correctly compiled. To build the application, run:
-
-    ```bash
-    go build -o streamr-api
-    ```
-
-    This command compiles the application and creates an executable named `streamr-api`.
-
-2. **Start the service**: To run the service, you can either execute the built binary (if you followed the optional build step) or use the `go run` command with the main file as an argument. Here are the commands for both methods:
-
-    - Using the built binary (if you have built it in the previous step):
-
-    ```bash
-    ./streamr-api
-    ```
-
-    - Using `go run`:
-
-    ```bash
-    go run main.go
-    ```
-
-    This command starts the Streamr API Service, making the API available for requests. By default, the service runs on port `8080`, unless a different port was specified in the `PORT` environment variable.
-
-3. **Verify the service is running**: You can verify that the service is running by accessing the Swagger UI for the API documentation and interactive exploration at `http://localhost:8080/` (adjust the port number if you used a custom port).
-
-    Opening this URL in a web browser should display the Swagger UI, where you can explore the API endpoints and try out requests directly from the interface.
-
-Congratulations! Your Streamr Operator Service is now running and ready to interact with the Streamr network.
-
-## Running with Docker
+## Running the Service: Docker
 
 For ease of deployment, the Streamr Operator Service can also be run as a Docker container. This method abstracts away the need for manually managing dependencies and environment setups. Follow the steps below to get your service running in a Docker container.
 
@@ -129,10 +95,49 @@ docker-compose down
 
 This will stop the Streamr Operator Service and clean up the resources used by the Docker container.
 
-The latest docker image is also available on dockerhub:
+The latest docker image is also available on dockerhub and can be run directly with the following commands::
 ```
 docker pull ftkuhnsman/streamr_api:latest
+
+docker volume create cron_config
+
+docker run --restart unless-stopped --pid host -p 8080:8080 --env-file .env -v cron_config:/cron ftkuhnsman/streamr_api:latest
 ```
+
+You can also specify a local directory (-v path-to-directory:/cron) and eliminate the command 'docker volume create cron_config'
+
+## Running The Service: Build From Source
+
+1. **Build the application** (optional): While this step is optional since you can run Go applications directly through the `go run` command, building the application can help ensure all dependencies are correctly compiled. To build the application, run:
+
+    ```bash
+    go build -o streamr-api
+    ```
+
+    This command compiles the application and creates an executable named `streamr-api`.
+
+2. **Start the service**: To run the service, you can either execute the built binary (if you followed the optional build step) or use the `go run` command with the main file as an argument. Here are the commands for both methods:
+
+    - Using the built binary (if you have built it in the previous step or downloaded the release binaries from GitHub):
+
+    ```bash
+    ./streamr-api
+    ```
+
+    - Using `go run`:
+
+    ```bash
+    go run main.go
+    ```
+
+    This command starts the Streamr API Service, making the API available for requests. By default, the service runs on port `8080`, unless a different port was specified in the `PORT` environment variable. Ensure all other environment variables have been set appropriately.
+
+3. **Verify the service is running**: You can verify that the service is running by accessing the Swagger UI for the API documentation and interactive exploration at `http://localhost:8080/` (adjust the port number if you used a custom port).
+
+    Opening this URL in a web browser should display the Swagger UI, where you can explore the API endpoints and try out requests directly from the interface.
+
+Congratulations! Your Streamr Operator Service is now running and ready to interact with the Streamr network.
+
 
 ## Usage
 
