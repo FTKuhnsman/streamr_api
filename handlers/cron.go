@@ -48,7 +48,7 @@ func CreateCronJob(s *models.Scheduler) gin.HandlerFunc {
 // @Router /cronjobs [get]
 func GetCronJobs(s *models.Scheduler) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
-		jobs := s.GetCronJobs()
+		jobs := s.GetCronJobsCopy()
 		c.JSON(http.StatusOK, jobs)
 	}
 	return gin.HandlerFunc(fn)
@@ -71,7 +71,9 @@ func DisableCronJob(s *models.Scheduler) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, s.Jobs[id])
+		job := s.GetCronJob(id)
+
+		c.JSON(http.StatusOK, job)
 	}
 	return gin.HandlerFunc(fn)
 }
@@ -88,13 +90,15 @@ func EnableCronJob(s *models.Scheduler) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 		id := c.Param("id")
 
-		err := s.ScheduleJob(s.Jobs[id])
+		job := s.GetCronJob(id)
+
+		err := s.ScheduleJob(job)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.JSON(http.StatusOK, s.Jobs[id])
+		c.JSON(http.StatusOK, job)
 	}
 	return gin.HandlerFunc(fn)
 }
@@ -116,7 +120,7 @@ func DeleteCronJob(s *models.Scheduler) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, s.Jobs[id])
+		c.JSON(http.StatusOK, nil)
 	}
 	return gin.HandlerFunc(fn)
 }

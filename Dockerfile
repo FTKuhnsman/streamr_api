@@ -12,6 +12,8 @@ RUN go build -o streamr_api main.go
 
 FROM ubuntu:22.04
 ENV SSL_CERT_DIR=/etc/ssl/certs
+RUN mkdir /cron
+ENV CRON_JOB_FILE=/cron/cron_jobs.json
 RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 RUN mkdir /app
 WORKDIR /app

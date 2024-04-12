@@ -6,16 +6,17 @@ import (
 	"net/http"
 	"os"
 	"streamr_api/common"
+	"sync"
 
 	"github.com/robfig/cron/v3"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
-const cronJobFile = "cron_jobs.json"
-
 type Scheduler struct {
-	Jobs map[string]*CronJob `json:"jobs"`
-	Cron *cron.Cron          `json:"-"`
+	mu          sync.Mutex
+	Jobs        map[string]*CronJob `json:"jobs"`
+	Cron        *cron.Cron          `json:"-"`
+	cronJobFile string
 }
 
 type CronJob struct {
@@ -30,8 +31,10 @@ type CronJob struct {
 func NewScheduler() *Scheduler {
 	cron.WithSeconds()
 	scheduler := Scheduler{
-		Jobs: make(map[string]*CronJob),
-		Cron: cron.New(cron.WithSeconds(), cron.WithChain(cron.Recover(cron.DefaultLogger))),
+		mu:          sync.Mutex{},
+		Jobs:        make(map[string]*CronJob),
+		Cron:        cron.New(cron.WithSeconds(), cron.WithChain(cron.Recover(cron.DefaultLogger))),
+		cronJobFile: common.GetStringEnvWithDefault("CRON_JOB_FILE", "cron_jobs.json"),
 	}
 	// Load existing jobs
 	err := scheduler.LoadCronJobs()
@@ -48,13 +51,13 @@ func (s *Scheduler) LoadCronJobs() error {
 	var jobs map[string]*CronJob
 
 	// Check if the file exists
-	_, err := os.Stat(cronJobFile)
+	_, err := os.Stat(s.cronJobFile)
 	if os.IsNotExist(err) {
 		return nil // Return an empty list if the file does not exist
 	}
 
 	// Read the file
-	bytes, err := os.ReadFile(cronJobFile)
+	bytes, err := os.ReadFile(s.cronJobFile)
 	if err != nil {
 		return err
 	}
@@ -64,10 +67,12 @@ func (s *Scheduler) LoadCronJobs() error {
 	if err != nil {
 		return err
 	}
-
+	s.mu.Lock()
 	s.Jobs = jobs
+	s.mu.Unlock()
 
 	// Schedule the jobs if enabled
+	s.mu.Lock()
 	for _, job := range s.Jobs {
 		if job.Enabled {
 			err = s.ScheduleJob(job)
@@ -76,18 +81,22 @@ func (s *Scheduler) LoadCronJobs() error {
 			}
 		}
 	}
+	s.mu.Unlock()
+
 	return nil
 }
 
 // SaveCronJobs saves the provided cron jobs into a JSON file.
 func (s *Scheduler) SaveCronJobs() error {
+	s.mu.Lock()
 	bytes, err := json.Marshal(s.Jobs)
+	s.mu.Unlock()
 	if err != nil {
 		return err
 	}
 
 	// Write to the file
-	return os.WriteFile(cronJobFile, bytes, 0644)
+	return os.WriteFile(s.cronJobFile, bytes, 0644)
 }
 
 func (s *Scheduler) CreateCronJob(job *CronJob) error {
@@ -97,7 +106,9 @@ func (s *Scheduler) CreateCronJob(job *CronJob) error {
 		return errors.New("Failed to generate random ID")
 	}
 
+	s.mu.Lock()
 	s.Jobs[randID] = job
+	s.mu.Unlock()
 
 	err = s.SaveCronJobs()
 	if err != nil {
@@ -115,8 +126,24 @@ func (s *Scheduler) CreateCronJob(job *CronJob) error {
 	return err
 }
 
-func (s *Scheduler) GetCronJobs() map[string]*CronJob {
-	return s.Jobs
+func (s *Scheduler) GetCronJobsCopy() map[string]CronJob {
+	// create a copy of jobs map
+	jobscopy := make(map[string]CronJob)
+	s.mu.Lock()
+	for k, v := range s.Jobs {
+		jobscopy[k] = *v
+	}
+	s.mu.Unlock()
+
+	return jobscopy
+}
+
+func (s *Scheduler) GetCronJob(id string) *CronJob {
+	s.mu.Lock()
+	job := s.Jobs[id]
+	s.mu.Unlock()
+
+	return job
 }
 
 func (s *Scheduler) ScheduleJob(job *CronJob) error {
@@ -136,17 +163,24 @@ func (s *Scheduler) ScheduleJob(job *CronJob) error {
 	if err != nil {
 		return err
 	}
+	job.Enabled = true
 	job.EntryID = entryID
 	return nil
 }
 
 func (s *Scheduler) RemoveJob(id string) error {
+	s.mu.Lock()
 	job, ok := s.Jobs[id]
+	s.mu.Unlock()
 	if !ok {
 		return errors.New("Job not found")
 	}
 	s.Cron.Remove(job.EntryID)
+
+	s.mu.Lock()
 	job.Enabled = false
+	s.mu.Unlock()
+
 	err := s.SaveCronJobs()
 	if err != nil {
 		return errors.New("Failed to save cron jobs")
@@ -155,12 +189,19 @@ func (s *Scheduler) RemoveJob(id string) error {
 }
 
 func (s *Scheduler) DeleteJob(id string) error {
+	s.mu.Lock()
 	job, ok := s.Jobs[id]
+	s.mu.Unlock()
 	if !ok {
 		return errors.New("Job not found")
 	}
+
 	s.Cron.Remove(job.EntryID)
+
+	s.mu.Lock()
 	delete(s.Jobs, id)
+	s.mu.Unlock()
+
 	err := s.SaveCronJobs()
 	if err != nil {
 		return errors.New("Failed to save cron jobs")
@@ -174,7 +215,9 @@ func (s *Scheduler) UpdateJob(id string, job *CronJob) error {
 		return err
 	}
 
+	s.mu.Lock()
 	s.Jobs[id] = job
+	s.mu.Unlock()
 
 	err = s.SaveCronJobs()
 	if err != nil {
