@@ -20,7 +20,7 @@ Before you begin, ensure you have met the following requirements:
 Clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/ftkuhnsman/streamr_api.git
+git clone https://github.com/musicmank545/streamr_api.git
 cd streamr_api
 ```
 ### Configuration
