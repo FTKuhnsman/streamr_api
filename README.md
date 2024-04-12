@@ -132,4 +132,59 @@ The latest docker image is also available on dockerhub:
 docker pull ftkuhnsman/streamr_api:latest
 ```
 
+## Usage
+
+This section provides examples of how to use the Streamr Operator Service API to perform common tasks such as viewing operator details, managing stakes, and withdrawing earnings. These examples use `curl`, a command-line tool for making HTTP requests. You can also use any HTTP client, including Postman, or the integrated Swagger UI at `http://localhost:8080/docs`.
+
+### Viewing Operator Details
+
+To retrieve details about the operator, including the staked balance and sponsorships:
+
+```bash
+curl -X GET "http://localhost:8080/api/v1/operator" -H "accept: application/json"
+```
+
+### Withdrawing Earnings
+To withdraw earnings for the operator:
+
+```bash
+Copy code
+curl -X GET "http://localhost:8080/api/v1/operator/withdrawearnings" -H "accept: application/json"
+```
+
+### Staking on a Sponsor
+To stake a certain amount on a given sponsor, replace <sponsorship_address> and <amount> with the sponsorship's address and the amount to stake in wei:
+
+```bash
+Copy code
+curl -X GET "http://localhost:8080/api/v1/operator/stake/<sponsorship_address>/<amount>" -H "accept: application/json"
+```
+### Reducing Stake
+To reduce the stake to a certain amount on a given sponsor, replace <sponsorship_address> and <new_amount> with the sponsorship's address and the new amount to stake in wei:
+
+```bash
+Copy code
+curl -X GET "http://localhost:8080/api/v1/operator/reducestaketo/<sponsorship_address>/<new_amount>" -H "accept: application/json"
+```
+
+### Listing Sponsorships and Earnings
+To list all sponsorships along with uncollected earnings:
+
+```bash
+Copy code
+curl -X GET "http://localhost:8080/api/v1/operator/sponsorshipsandearnings" -H "accept: application/json"
+```
+
+### Compounding Earnings
+To withdraw earnings from all sponsorships and automatically restake them:
+
+```bash
+Copy code
+curl -X GET "http://localhost:8080/api/v1/operator/withdrawearningsandcompound" -H "accept: application/json"
+```
+
+Note: These examples use the default port 8080 specified in the Docker Compose file. If you are running the service without Docker or have configured a different port, adjust the URLs accordingly.
+
+For a comprehensive list of all available API endpoints and their parameters, refer to the Swagger UI documentation at http://localhost:8080/docs after starting the service.
+
 By following these steps, you can quickly get the Streamr Operator Service running in a Docker container, making it easy to deploy and manage.
