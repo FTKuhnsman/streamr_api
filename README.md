@@ -12,7 +12,8 @@ Streamr Operator API is a management API developed in Go, leveraging the Gin fra
 
 Before you begin, ensure you have met the following requirements:
 
-- Go 1.16 or higher
+- Go 1.16 or higher (for building from source)
+- Docker (for Docker deployment)
 - Access to an Polygon blockchain node (e.g., via Infura or a local node)
 
 ## Getting Started
