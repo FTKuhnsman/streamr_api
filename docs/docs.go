@@ -263,7 +263,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Operator"
+                                "$ref": "#/definitions/models.GetSponsorshipsAndEarningsResponse"
                             }
                         }
                     }
@@ -341,6 +341,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/operator/stakeprorata": {
+            "get": {
+                "description": "Increase stake on all sponsorships with all available DATA pro-rated by sponsorship current stake.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Distribute available DATA to all sponsorships.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/operator/undelegationqueue": {
+            "get": {
+                "description": "Responds with the undelegation queue.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Get the undelegation queue.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/operator/valuewithoutearnings": {
             "get": {
                 "description": "Responds with the Operator attributes.",
@@ -357,7 +409,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Operator"
+                                "type": "integer"
                             }
                         }
                     }
@@ -688,6 +740,29 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GetSponsorshipsAndEarningsResponse": {
+            "type": "object",
+            "properties": {
+                "addresses": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "earnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/big.Int"
+                    }
+                },
+                "maxAllowedEarnings": {
+                    "$ref": "#/definitions/big.Int"
+                }
+            }
+        },
         "models.Operator": {
             "type": "object",
             "properties": {
@@ -739,7 +814,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Streamr Operator Service",

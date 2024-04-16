@@ -2,6 +2,7 @@ package models
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"log"
 	"math/big"
 	"streamr_api/blockchain"
@@ -30,6 +31,12 @@ type GetSponsorshipsAndEarningsResponse struct {
 type DeployedStakeResponse struct {
 	DeployedBySponsorship map[ethcommon.Address]*big.Int `json:"deployedBySponsorship"`
 	TotalDeployed         *big.Int                       `json:"totalDeployed"`
+}
+
+type UndelegationRecordResponse struct {
+	Delegator ethcommon.Address `json:"delegator"`
+	Amount    *big.Int          `json:"amountWei"`
+	Timestamp *big.Int          `json:"timestamp"`
 }
 
 type StakedIntoResponse struct {
@@ -66,13 +73,31 @@ func NewOperator(contractAddr string, ownerAddr string, privateKey string) *Oper
 	}
 }
 
-func (o *Operator) GetValueWithoutEarnings() interface{} {
+func (o *Operator) GetValueWithoutEarnings() (*big.Int, error) {
 	result, err := o.TxManager.ContractCall("valueWithoutEarnings", []interface{}{})
 	if err != nil {
 		log.Fatalf("Failed to unpack the output: %v", err)
-		return err
+		return nil, err
 	}
-	return result
+
+	return result[0].(*big.Int), nil
+}
+
+func (o *Operator) GetUndelegationQueue() ([][]UndelegationRecordResponse, error) {
+	result, err := o.TxManager.ContractCallSpecial("undelegationQueue", []interface{}{})
+	if err != nil {
+		log.Fatalf("Failed to unpack the output: %v", err)
+		return nil, err
+	}
+
+	var jsonResult [][]UndelegationRecordResponse
+	err = json.Unmarshal(result, &jsonResult)
+	if err != nil {
+		log.Printf("Failed to unmarshal record: %v", err)
+		return nil, err
+	}
+
+	return jsonResult, nil
 }
 
 func (o *Operator) WithdrawEarnings() (string, error) {
@@ -124,12 +149,18 @@ func (o *Operator) WithdrawEarningsAndCompound() ([]string, error) {
 	}
 
 	// iterate each sponsor and set stake to the current amount plus the earnings withdrawn in the previous transaction
-	for sponsorA, currentAmount := range deployedStake.DeployedBySponsorship {
+	for sponsorA := range deployedStake.DeployedBySponsorship {
 		for i, sponsorB := range sponsors.Addresses {
 			if sponsorA == sponsorB {
-				newAmount := new(big.Int).Add(currentAmount, sponsors.Earnings[i])
-				log.Printf("Adding %s stake to %s\n", newAmount.String(), sponsorA.Hex())
-				tx, err := o.Stake(sponsorA, sponsors.Earnings[i])
+
+				// the protocol take 5% of earnings, so reduce the earnings by 5% before compounding
+				amount := sponsors.Earnings[i]
+				amount = amount.Mul(amount, big.NewInt(95))
+				amount = amount.Div(amount, big.NewInt(100))
+
+				log.Printf("Adding %s stake to %s\n", sponsors.Earnings[i].String(), sponsorA.Hex())
+
+				tx, err := o.Stake(sponsorA, amount)
 				go func() {
 					txResult, err := o.TxManager.PolygonWaitForTx(tx, 120*time.Second)
 					if err != nil {
@@ -234,4 +265,68 @@ func (o *Operator) Stake(addr ethcommon.Address, targetStake *big.Int) (string, 
 	}
 
 	return result, nil
+}
+
+func (o *Operator) StakeProRata() ([]string, error) {
+	deployedStake, err := o.GetDeployedStake()
+	if err != nil {
+		log.Printf("Failed to get deployed stake: %v", err)
+		return nil, err
+	}
+	log.Printf("Deployed Stake: %v\n", deployedStake.TotalDeployed)
+	totalValue, err := o.GetValueWithoutEarnings()
+	unstaked := new(big.Int).Sub(totalValue, deployedStake.TotalDeployed)
+	log.Printf("Unstaked: %s\nerr: %v", unstaked.String(), err)
+	// use a DeployedStakeResponse object to calculate and store amounts of stake to deploy to each sponsorship
+	// using this data type for convenience
+	var stakeProRata DeployedStakeResponse = DeployedStakeResponse{
+		DeployedBySponsorship: make(map[ethcommon.Address]*big.Int),
+		TotalDeployed:         totalValue,
+	}
+
+	// calculate the total amount of stake to deploy to each sponsoship based on total available DATA and
+	// amount of DATA already deployed to each sponsorship
+	for sponsorhip, deployed := range deployedStake.DeployedBySponsorship {
+		// calculate share of new stake to this sponsorship. Multiply first to avoid rounding errors, then divide by totalDeployed
+		numerator := new(big.Int)
+		numerator.Mul(unstaked, deployed)
+		share := new(big.Int).Div(numerator, deployedStake.TotalDeployed)
+		stakeProRata.DeployedBySponsorship[sponsorhip] = share
+		stakeProRata.TotalDeployed.Add(stakeProRata.TotalDeployed, share)
+		log.Printf("Share for %s: %s\n", sponsorhip.Hex(), share.String())
+	}
+
+	// check to see if the total amount of stake to deploy is equal to the total amount of DATA available
+	// if not, adjust the stake to deploy to the first sponsorship to make up the difference
+	if stakeProRata.TotalDeployed.Cmp(totalValue) != 0 {
+		adjustment := new(big.Int).Sub(totalValue, stakeProRata.TotalDeployed)
+		lastSponsorship := ethcommon.Address{}
+		for sponsorhip := range deployedStake.DeployedBySponsorship {
+			lastSponsorship = sponsorhip
+			break
+		}
+		stakeProRata.DeployedBySponsorship[lastSponsorship].Add(stakeProRata.DeployedBySponsorship[lastSponsorship], adjustment)
+		stakeProRata.TotalDeployed.Add(stakeProRata.TotalDeployed, adjustment)
+	}
+
+	// iterate through the sponsorships and deploy the calculated amount of stake to each
+	txList := []string{}
+	for sponsorhip, amount := range stakeProRata.DeployedBySponsorship {
+		tx, err := o.Stake(sponsorhip, amount)
+		if err != nil {
+			log.Printf("Failed to increase stake: %v", err)
+			return nil, err
+		}
+		go func() {
+			txResult, err := o.TxManager.PolygonWaitForTx(tx, 120*time.Second)
+			if err != nil {
+				log.Printf("Failed to wait for transaction: %v", err)
+			} else {
+				log.Printf("Transaction %s completed as: %v\n", txResult.Hash().Hex(), txResult)
+			}
+		}()
+		txList = append(txList, tx)
+	}
+
+	return txList, nil
 }

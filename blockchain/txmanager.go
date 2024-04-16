@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -88,6 +89,36 @@ func (tm *TxManager) ContractCall(method string, params []interface{}) ([]interf
 
 	fmt.Println("Result:", result)
 	return result, nil
+}
+
+// created a separate function for calling functions with non-standard return types. This returns a byte string that the calling function can handle as needed.
+func (tm *TxManager) ContractCallSpecial(method string, params []interface{}) ([]byte, error) {
+	// Creating a call message
+	data, err := tm.contractAbi.Pack(method, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	callMsg := ethereum.CallMsg{
+		To:   &tm.contractAddr,
+		Data: data,
+	}
+
+	output, err := tm.client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		log.Fatalf("Failed to execute contract call: %v", err)
+		return nil, err
+	}
+
+	result, err := tm.contractAbi.Unpack(method, output)
+	if err != nil {
+		log.Fatalf("Failed to unpack the output: %v", err)
+		return nil, err
+	}
+
+	fmt.Println("Result:", result)
+	byteResult, _ := json.Marshal(result)
+	return byteResult, nil
 }
 
 func (tm *TxManager) ContractSendTxWithWait(method string, params []interface{}, duration time.Duration) (*types.Transaction, error) {

@@ -30,11 +30,15 @@ func GetOperator(o *models.Operator) gin.HandlerFunc {
 // @Description  Responds with the Operator attributes.
 // @Tags         Operator
 // @Produce      json
-// @Success      200  {array}  models.Operator
+// @Success      200  {array}  uint64
 // @Router       /operator/valuewithoutearnings [get]
 func OperatorValueWithoutEarnings(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
-		result := o.GetValueWithoutEarnings()
+		result, err := o.GetValueWithoutEarnings()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusOK, result)
 	}
 
@@ -152,7 +156,7 @@ func ReduceStakeTo(o *models.Operator) gin.HandlerFunc {
 // @Description  Responds with the list of sponsorships and uncollected earnings.
 // @Tags         Operator
 // @Produce      json
-// @Success      200  {array}  models.Operator
+// @Success      200  {array}  models.GetSponsorshipsAndEarningsResponse
 // @Router       /operator/sponsorshipsandearnings [get]
 func SponsorshipsAndEarnings(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
@@ -189,7 +193,8 @@ func OperatorWithdrawEarnings(o *models.Operator) gin.HandlerFunc {
 	return gin.HandlerFunc(fn)
 }
 
-// WithdrawEarningsAndCompount            godoc
+// CURRENTLY NOT IMPLEMENTED as this cannot currently handle the undelegation queue, if it exists.
+// WithdrawEarningsAndCompound            godoc
 // @Summary      Withdraw earnings from sponsorship and restake.
 // @Description  Withdraws earnings from all sponsorships and restake to compound.
 // @Tags         Operator
@@ -200,6 +205,48 @@ func WithdrawEarningsAndCompound(o *models.Operator) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 
 		result, err := o.WithdrawEarningsAndCompound()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	}
+
+	return gin.HandlerFunc(fn)
+}
+
+// StakeProRata  godoc
+// @Summary      Distribute available DATA to all sponsorships.
+// @Description  Increase stake on all sponsorships with all available DATA pro-rated by sponsorship current stake.
+// @Tags         Operator
+// @Produce      json
+// @Success      200  {array}  []string
+// @Router       /operator/stakeprorata [get]
+func StakeProRata(o *models.Operator) gin.HandlerFunc {
+	fn := func(c *gin.Context) {
+
+		result, err := o.StakeProRata()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	}
+
+	return gin.HandlerFunc(fn)
+}
+
+// UndelegationQueue  godoc
+// @Summary      Get the undelegation queue.
+// @Description  Responds with the undelegation queue.
+// @Tags         Operator
+// @Produce      json
+// @Success      200  {array}  []uint8
+// @Router       /operator/undelegationqueue [get]
+func UndelegationQueue(o *models.Operator) gin.HandlerFunc {
+	fn := func(c *gin.Context) {
+
+		result, err := o.GetUndelegationQueue()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

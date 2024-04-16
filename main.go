@@ -19,7 +19,6 @@ import (
 // @contact.name   Joseph Kuhnsman
 // @contact.email  admin@ftkuhnsman.com
 
-// @host      localhost:8080
 // @BasePath  /api/v1
 
 func init() {

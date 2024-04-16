@@ -9,7 +9,6 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
         "/cronjobs": {
@@ -257,7 +256,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Operator"
+                                "$ref": "#/definitions/models.GetSponsorshipsAndEarningsResponse"
                             }
                         }
                     }
@@ -335,6 +334,58 @@
                 }
             }
         },
+        "/operator/stakeprorata": {
+            "get": {
+                "description": "Increase stake on all sponsorships with all available DATA pro-rated by sponsorship current stake.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Distribute available DATA to all sponsorships.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/operator/undelegationqueue": {
+            "get": {
+                "description": "Responds with the undelegation queue.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Operator"
+                ],
+                "summary": "Get the undelegation queue.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/operator/valuewithoutearnings": {
             "get": {
                 "description": "Responds with the Operator attributes.",
@@ -351,7 +402,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.Operator"
+                                "type": "integer"
                             }
                         }
                     }
@@ -678,6 +729,29 @@
                     }
                 },
                 "totalDeployed": {
+                    "$ref": "#/definitions/big.Int"
+                }
+            }
+        },
+        "models.GetSponsorshipsAndEarningsResponse": {
+            "type": "object",
+            "properties": {
+                "addresses": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "earnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/big.Int"
+                    }
+                },
+                "maxAllowedEarnings": {
                     "$ref": "#/definitions/big.Int"
                 }
             }

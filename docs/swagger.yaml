@@ -225,6 +225,21 @@ definitions:
       totalDeployed:
         $ref: '#/definitions/big.Int'
     type: object
+  models.GetSponsorshipsAndEarningsResponse:
+    properties:
+      addresses:
+        items:
+          items:
+            type: integer
+          type: array
+        type: array
+      earnings:
+        items:
+          $ref: '#/definitions/big.Int'
+        type: array
+      maxAllowedEarnings:
+        $ref: '#/definitions/big.Int'
+    type: object
   models.Operator:
     properties:
       contractAbi:
@@ -254,7 +269,6 @@ definitions:
       stakedInto:
         $ref: '#/definitions/big.Int'
     type: object
-host: localhost:8080
 info:
   contact:
     email: admin@ftkuhnsman.com
@@ -424,7 +438,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.Operator'
+              $ref: '#/definitions/models.GetSponsorshipsAndEarningsResponse'
             type: array
       summary: Get the sponsorships and earnings.
       tags:
@@ -476,6 +490,41 @@ paths:
       summary: Get the Streamr Operator staked balance in sponsorship.
       tags:
       - Operator
+  /operator/stakeprorata:
+    get:
+      description: Increase stake on all sponsorships with all available DATA pro-rated
+        by sponsorship current stake.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              items:
+                type: string
+              type: array
+            type: array
+      summary: Distribute available DATA to all sponsorships.
+      tags:
+      - Operator
+  /operator/undelegationqueue:
+    get:
+      description: Responds with the undelegation queue.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              items:
+                type: integer
+              type: array
+            type: array
+      summary: Get the undelegation queue.
+      tags:
+      - Operator
   /operator/valuewithoutearnings:
     get:
       description: Responds with the Operator attributes.
@@ -486,7 +535,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.Operator'
+              type: integer
             type: array
       summary: Get the Streamr Operator details.
       tags:
